@@ -8,8 +8,8 @@ To get started, follow these steps:
 
 1. Clone this repository:
     ```sh
-    git clone https://github.com/ardantus/meta-ai-api.git
-    cd meta-ai-api
+    git clone https://github.com/ardantus/chatmeta.git
+    cd chatmeta
     ```
 
 2. Build the Docker image:
