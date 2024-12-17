@@ -8,11 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (userMessage) {
             appendMessage("You: " + userMessage);
             sendMessageToServer(userMessage);
-            messageInput.value = ""; // Kosongkan input
+            messageInput.value = "";
         }
     });
 
-    // Kirim pesan dengan menekan Enter
     messageInput.addEventListener("keypress", (event) => {
         if (event.key === "Enter") {
             sendButton.click();
@@ -23,35 +22,38 @@ document.addEventListener("DOMContentLoaded", () => {
         const messageDiv = document.createElement("div");
         messageDiv.textContent = message;
 
-        // Styling khusus untuk error
         if (isError) {
             messageDiv.style.color = "red";
         }
 
         chatContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight; // Auto-scroll ke bawah
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function appendImage(imageUrl) {
+        const imageElement = document.createElement("img");
+        imageElement.src = imageUrl;
+        imageElement.alt = "Generated Image";
+        imageElement.style.maxWidth = "300px";
+        imageElement.style.marginTop = "10px";
+
+        chatContainer.appendChild(imageElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
     function sendMessageToServer(message) {
         fetch("/chat", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: message })
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Server Error: " + response.statusText);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log("Server Response:", data); // Log respons untuk debugging
-            if (data && data.response) {
+            if (data.image_url) {
                 appendMessage("MetaAI: " + data.response);
+                appendImage(data.image_url);  // Tampilkan gambar jika tersedia
             } else {
-                appendMessage("MetaAI: Respons tidak valid dari server.", true);
+                appendMessage("MetaAI: " + data.response);
             }
         })
         .catch(error => {

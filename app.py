@@ -1,44 +1,92 @@
+import os
 from flask import Flask, request, jsonify, render_template
 from meta_ai_api import MetaAI
 
 app = Flask(__name__)
 
+# Ambil kredensial dari environment atau set langsung
+FB_EMAIL = os.getenv("META_FB_EMAIL", "your_fb_email")
+FB_PASSWORD = os.getenv("META_FB_PASSWORD", "your_fb_password")
+
 # Inisialisasi MetaAI
-ai = MetaAI()
+ai = None
+ai_with_login = None
+
+def initialize_metaai():
+    """Fungsi untuk memastikan MetaAI login."""
+    global ai_with_login
+    try:
+        print("DEBUG: Mencoba login ke MetaAI...")
+        ai_with_login = MetaAI(fb_email=FB_EMAIL, fb_password=FB_PASSWORD)
+        print("DEBUG: Login MetaAI berhasil.")
+    except Exception as e:
+        print("ERROR: Gagal login ke MetaAI:", e)
+        ai_with_login = None
+
+try:
+    # Inisialisasi untuk teks
+    print("DEBUG: Inisialisasi MetaAI untuk teks...")
+    ai = MetaAI()
+    print("DEBUG: MetaAI berhasil diinisialisasi untuk teks.")
+except Exception as e:
+    print("ERROR: MetaAI tidak dapat diinisialisasi:", e)
+    ai = None
+
+# Login untuk fitur gambar
+initialize_metaai()
 
 @app.route('/')
 def index():
-    # Render halaman index.html
     return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    # Ambil pesan input dari user
-    user_message = request.json.get("message")
-    
+    """Route untuk menangani teks."""
+    user_message = request.json.get("message", "")
+
     try:
-        # Dapatkan respons dari MetaAI
-        meta_ai_response = ai.prompt(message=user_message)
+        if not ai:
+            raise Exception("MetaAI tidak dapat diinisialisasi.")
 
-        # Debug: Cetak respons untuk memastikan formatnya
-        print("DEBUG: MetaAI Response:", meta_ai_response)
+        print(f"DEBUG: Permintaan teks: {user_message}")
+        response = ai.prompt(message=user_message)
 
-        # Pastikan respons berupa string atau ekstrak dari objek
-        if isinstance(meta_ai_response, dict):
-            # Coba ambil kunci 'response', 'text', atau 'message' jika respons adalah dictionary
-            response_text = meta_ai_response.get("response") or meta_ai_response.get("text") or meta_ai_response.get("message") or "Respons tidak tersedia."
+        if isinstance(response, dict):
+            response_text = response.get("message", "Respons tidak tersedia.")
         else:
-            # Jika bukan dictionary, konversi langsung ke string
-            response_text = str(meta_ai_response)
+            response_text = response.strip() if response else "Respons tidak tersedia."
 
-        # Return respons ke frontend dalam format JSON
         return jsonify({"response": response_text})
 
     except Exception as e:
-        # Tangani error jika ada masalah saat memanggil MetaAI
-        print("Error:", e)  # Cetak error ke terminal
-        return jsonify({"response": f"Error: {str(e)}"}), 500
+        print("ERROR:", e)
+        return jsonify({"response": "Error: Tidak dapat memproses permintaan."}), 500
+
+@app.route('/generate-image', methods=['POST'])
+def generate_image():
+    """Route untuk menangani generate gambar."""
+    user_message = request.json.get("message", "")
+
+    try:
+        if not ai_with_login:
+            initialize_metaai()  # Coba login ulang
+            if not ai_with_login:
+                return jsonify({"response": "Error: Gagal login. Pastikan kredensial benar."}), 403
+
+        print(f"DEBUG: Permintaan generate image: {user_message}")
+        response = ai_with_login.prompt(message=user_message)
+
+        # Debug respons
+        print("DEBUG: Raw Image Response:", response)
+
+        if isinstance(response, dict) and "image_url" in response:
+            return jsonify({"image_url": response["image_url"], "response": "Gambar berhasil dibuat."})
+        else:
+            return jsonify({"response": "Gambar tidak tersedia.", "image_url": None})
+
+    except Exception as e:
+        print("ERROR:", e)
+        return jsonify({"response": "Error: Gagal menghasilkan gambar.", "image_url": None}), 500
 
 if __name__ == '__main__':
-    # Jalankan aplikasi Flask di port 8081
     app.run(debug=True, host='0.0.0.0', port=8081)
