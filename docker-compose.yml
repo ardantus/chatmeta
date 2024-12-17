@@ -1,0 +1,9 @@
+services:
+  meta-ai-chat:
+    build: .
+    container_name: meta-ai-chat
+    ports:
+      - "8081:8081"  # Map port localhost ke port container
+    volumes:
+      - .:/app       # Sinkronkan file lokal dengan container
+    restart: always
