@@ -1,5 +1,4 @@
-# Meta API Usage
-
+# Penggunaan API Meta
 This repository demonstrates the usage of the Meta API. The source scripts are derived from [Strvm/meta-ai-api](https://github.com/Strvm/meta-ai-api). The scripts have been packaged into a Docker container and provided with a visual interface for ease of use.
 
 ## Getting Started
